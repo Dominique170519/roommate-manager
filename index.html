@@ -151,6 +151,7 @@ textarea.input{resize:vertical;min-height:72px}
 
 /* ===== 弹窗 ===== */
 .modal-mask{position:fixed;inset:0;background:rgba(24,35,31,.45);z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:0;animation:fadeIn .18s ease}
+.modal-mask[hidden]{display:none !important}
 .modal{background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:24px;animation:slideUp .22s ease}
 @media(min-width:640px){
   .modal-mask{align-items:center;padding:24px}
