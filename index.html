@@ -182,6 +182,14 @@ textarea.input{resize:vertical;min-height:72px}
 .done-badge{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-weight:700;font-size:13px}
 .done-badge svg{width:15px;height:15px}
 .swap-badge{display:inline-flex;align-items:center;gap:5px;color:#B9770E;font-weight:700;font-size:12px;background:var(--accent-soft);padding:3px 9px;border-radius:999px}
+.pref-badge{display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:700;font-size:11.5px;background:rgba(14,107,92,.1);padding:2px 8px;border-radius:999px}
+.pref-badge svg{width:11px;height:11px}
+.pref-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.pref-row:last-child{border-bottom:none}
+.pref-row .person-cell{min-width:130px}
+.pref-sels{display:flex;gap:10px;flex-wrap:wrap}
+.pref-sels label{font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.pref-sels select{width:auto;padding:6px 10px;font-size:13px}
 .swap-badge svg{width:12px;height:12px}
 .swap-note{display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:12.5px;color:var(--ink-2);border-bottom:1px dashed var(--line)}
 .swap-note:last-child{border-bottom:none}
@@ -349,7 +357,28 @@ const AV_COLORS=['#0E6B5C','#D97706','#6D5BD0','#C2425E','#0E7490','#4D7C0F','#B
 const KEY='hezu_guanjia_v1';
 let S=null;
 function rm(id){return S.roommates.find(x=>x.id===id)||S.roommates[0];}
-function dutyOf(week,rms){rms=rms||S.roommates;const m=week.match(/^(\d+)-W(\d+)$/);const n=rms.length||1;const base=(+m[1]*53+(+m[2]))%n;const out={};AREAS.forEach((a,idx)=>{out[a.id]=rms[(base+idx)%n].id;});return out;}
+function dutyOf(week,rms){
+  rms=rms||S.roommates;const m=week.match(/^(\d+)-W(\d+)$/);const n=rms.length||1;
+  const base=(+m[1]*53+(+m[2]))%n;
+  const prefs=(S&&S.prefs)||{};
+  const assign={};const used={};
+  for(let idx=0;idx<AREAS.length;idx++){
+    const a=AREAS[idx];if(assign[a.id])continue;
+    const cand=rms.find(r=>!used[r.id]&&((prefs[r.id]||{}).preferred===a.id)&&((prefs[r.id]||{}).unavailable!==a.id));
+    if(cand){assign[a.id]=cand.id;used[cand.id]=true;}
+  }
+  for(let idx=0;idx<AREAS.length;idx++){
+    const a=AREAS[idx];if(assign[a.id])continue;
+    for(let k=0;k<n;k++){
+      const r=rms[(base+idx+k)%n];
+      if(used[r.id])continue;
+      if((prefs[r.id]||{}).unavailable===a.id)continue;
+      assign[a.id]=r.id;used[r.id]=true;break;
+    }
+  }
+  AREAS.forEach(a=>{if(!assign[a.id]){const free=rms.find(r=>!used[r.id]);if(free){assign[a.id]=free.id;used[free.id]=true;}}});
+  return assign;
+}
 function defaultState(){
   const now=new Date();
   const mk=(name,c)=>({id:uid(),name,color:c});
@@ -365,16 +394,16 @@ function defaultState(){
   const ruleSigns={};rules.forEach((r,i)=>{const signed=i%3===2?[me.id,r3.id]:i%4===0?[me.id,r2.id,r3.id,r4.id]:i%5===0?[me.id,r2.id]:[me.id,r2.id,r3.id];ruleSigns[r.id]=signed;});
   const tasks={};for(let k=1;k<=4;k++){const key=weekKeyOf(addDays(new Date(),-7*k));const duty=dutyOf(key,rms);AREAS.forEach((a,idx)=>{if(idx!==k%4){tasks[key+'_'+a.id]=daysAgo(7*k-(k%3));}});}
   const wk=weekKeyOf(new Date());tasks[wk+'_kitchen']=daysAgo(1);
-  return {version:1,flat:{name:'阳光花园 3 栋 502',createdAt:daysAgo(60)},meId:me.id,roommates:rms,expenses:exps.filter(Boolean),items,rules,ruleSigns,tasks,swaps:{},lastDataReset:null};
+  return {version:1,flat:{name:'阳光花园 3 栋 502',createdAt:daysAgo(60)},meId:me.id,roommates:rms,expenses:exps.filter(Boolean),items,rules,ruleSigns,tasks,prefs:{[me.id]:{preferred:'kitchen',unavailable:null}},swaps:{},lastDataReset:null};
 }
 function buildFreshState(flatName,names){
   const rms=names.map((n,i)=>({id:uid(),name:n,color:AV_COLORS[i%AV_COLORS.length]}));
   const fr=(t,c,ct)=>({id:uid(),title:t,cat:c,content:ct,createdAt:dstr(new Date())});
   const rules=[fr('晚上 11 点后保持安静','作息噪音','23:00 后客厅不喧闹，音乐、游戏、视频尽量戴耳机或调低音量。'),fr('公共区域每周大扫除','清洁卫生','每周日按值日表完成清洁，完成后在「值日」模块打卡。'),fr('访客提前说一声','访客','带朋友回家在群里说一声；留宿不超过 3 晚，需征得室友同意。')];
   const ruleSigns={};rules.forEach(r=>{ruleSigns[r.id]=[];});
-  return {version:1,flat:{name:flatName,createdAt:dstr(new Date())},meId:rms[0].id,roommates:rms,expenses:[],items:[],rules,ruleSigns,tasks:{},swaps:{},onboarded:true};
+  return {version:1,flat:{name:flatName,createdAt:dstr(new Date())},meId:rms[0].id,roommates:rms,expenses:[],items:[],rules,ruleSigns,tasks:{},prefs:{},swaps:{},onboarded:true};
 }
-function load(){try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);if(S&&Array.isArray(S.roommates)&&S.roommates.length&&Array.isArray(S.expenses)){if(!S.swaps)S.swaps={};return;}}}catch(e){}S=defaultState();}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);if(S&&Array.isArray(S.roommates)&&S.roommates.length&&Array.isArray(S.expenses)){if(!S.swaps)S.swaps={};if(!S.prefs)S.prefs={};return;}}}catch(e){}S=defaultState();}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('保存失败：浏览器存储不可用');}}
 function resetDemo(){S=defaultState();save();renderAll();toast('已重置为演示数据');}
 function clearAll(){try{localStorage.removeItem(KEY);}catch(e){}location.reload();}
@@ -440,7 +469,7 @@ function viewHome(){
     +'<button class="quick" onclick="openItemModal()"><div>'+ICONS.package+'</div><b>登记物品</b><span>缺货自动提醒</span></button>'
     +'<button class="quick" onclick="openRuleModal()"><div>'+ICONS.doc+'</div><b>新增公约</b><span>室友一起签署</span></button></div>';
   const lowHtml=lows.length?'<div class="list">'+lows.slice(0,3).map(it=>'<div class="row"><div class="stock-icon warn" style="width:38px;height:38px">'+ICONS.alert+'</div><div class="row-main"><div class="row-title">'+esc(it.name)+'</div><div class="row-sub">剩 '+it.qty+' '+it.unit+' · 低于提醒线 '+it.threshold+' '+it.unit+'</div></div><button class="btn soft sm" onclick="restock(\''+it.id+'\')">'+ICONS.plus+'补货</button></div>').join('')+'</div>':'<div class="empty" style="padding:14px">库存充足，暂无待采购物品。</div>';
-  const dutyHtml=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];return '<div class="row"><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div><div class="row-main"><div class="row-sub" style="margin-top:0">'+avatarHtml(r)+' '+nameHtml(r)+(sw?' <span class="swap-badge">'+ICONS.swap+'调</span>':'')+'</div></div><div>'+(done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡完成</button>')+'</div></div>';}).join('');
+  const dutyHtml=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];const pf=(S.prefs[rid]||{}).preferred===a.id;return '<div class="row"><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div><div class="row-main"><div class="row-sub" style="margin-top:0">'+avatarHtml(r)+' '+nameHtml(r)+(pf?' <span class="pref-badge">'+ICONS.spark+'首选</span>':'')+(sw?' <span class="swap-badge">'+ICONS.swap+'调</span>':'')+'</div></div><div>'+(done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡完成</button>')+'</div></div>';}).join('');
   const signHtml='<div style="display:flex;align-items:center;gap:12px"><div class="progress" style="height:10px"><i style="width:'+signPct+'%"></i></div><span style="font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap">'+signPct+'%</span></div>';
   return '<div class="hero"><div class="hero-greet">'+greeting()+'，'+esc(me.name)+'</div><div class="hero-title">'+esc(S.flat.name)+'</div><div class="hero-date">'+fmtDate(dstr(new Date()))+' · 和室友一起把生活过明白</div>'+heroChips+'</div>'+buildTodoCard()+stats+quicks
     +'<div class="section"><div class="section-head"><div class="section-title">'+ICONS.alert+' 待采购提醒</div><a class="section-link" href="#/items">去物品页 →</a></div><div class="card">'+lowHtml+'</div></div>'
@@ -521,21 +550,32 @@ function doSwap(aid,toId){
   renderAll();
 }
 function cancelSwap(aid){const wk=weekKeyOf(new Date());delete S.swaps[wk+'_'+aid];save();renderAll();toast('已恢复原排班');}
+function openPrefModal(){
+  const opts=(cur)=>'<option value="">无</option>'+AREAS.map(a=>'<option value="'+a.id+'"'+(cur===a.id?' selected':'')+'>'+a.name+'</option>').join('');
+  const rows=S.roommates.map(r=>{const p=S.prefs[r.id]||{};return '<div class="pref-row"><div class="person-cell">'+avatarHtml(r)+'<b>'+esc(r.name)+(r.id===S.meId?' <span class="me-tag">我</span>':'')+'</b></div><div class="pref-sels"><label>首选 <select class="input" name="pref_'+r.id+'">'+opts(p.preferred)+'</select></label><label>不方便 <select class="input" name="unav_'+r.id+'">'+opts(p.unavailable)+'</select></label></div></div>';}).join('');
+  openModal('<div class="modal-head"><div class="modal-title">值日偏好</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div>'
+    +'<div style="font-size:13px;color:var(--ink-2);line-height:1.9;margin-bottom:12px">每位室友可标一个<b style="color:var(--ink)">首选区域</b>（优先排给你）和一个<b style="color:var(--ink)">不方便区域</b>（自动跳过）。排班会在公平轮换的基础上尽量满足，不设置就照旧轮流。</div>'
+    +'<form onsubmit="submitPrefs(event)">'+rows+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">保存并重新排班</button></div></form>');
+}
+function submitPrefs(ev){ev.preventDefault();const f=ev.target;const p={};
+  S.roommates.forEach(r=>{p[r.id]={preferred:f['pref_'+r.id]?f['pref_'+r.id].value||null:null,unavailable:f['unav_'+r.id]?f['unav_'+r.id].value||null:null};});
+  S.prefs=p;save();closeModal();toast('排班已按偏好更新');renderAll();
+}
 function viewCleaning(){
   const wk=weekKeyOf(new Date());const next=weekKeyOf(addDays(new Date(),7));
   const duty=dutyOf(wk);const dutyNext=dutyOf(next);
   const doneCount=AREAS.filter(a=>S.tasks[wk+'_'+a.id]).length;
-  const rows=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];
+  const rows=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];const pf=(S.prefs[rid]||{}).preferred===a.id;
     const ops=done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡</button><button class="btn ghost sm" onclick="swapDuty(\''+a.id+'\')">'+ICONS.swap+'调班</button></div>';
-    return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+(sw?' <span class="swap-badge">'+ICONS.swap+'已调班</span>':'')+'</div></td><td style="text-align:right;white-space:nowrap">'+ops+'</td></tr>';}).join('');
-  const nextRows=AREAS.map(a=>{const r=rm(dutyNext[a.id]);return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+'</div></td></tr>';}).join('');
+    return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+(pf?' <span class="pref-badge">'+ICONS.spark+'首选</span>':'')+(sw?' <span class="swap-badge">'+ICONS.swap+'已调班</span>':'')+'</div></td><td style="text-align:right;white-space:nowrap">'+ops+'</td></tr>';}).join('');
+  const nextRows=AREAS.map(a=>{const r=rm(dutyNext[a.id]);const pf=(S.prefs[r.id]||{}).preferred===a.id;return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+(pf?' <span class="pref-badge">'+ICONS.spark+'首选</span>':'')+'</div></td></tr>';}).join('');
   let hist='';for(let k=4;k>=1;k--){const key=weekKeyOf(addDays(new Date(),-7*k));const dutyK=dutyOf(key);const dots=AREAS.map(a=>{const done=!!S.tasks[key+'_'+a.id];return '<span class="hist-dot"><i class="'+(done?'done':'no')+'"></i>'+a.name+'</span>';}).join('');hist+='<div class="hist-week"><div class="wk">'+fmtWeek(key)+'</div><div class="hist-dots">'+dots+'</div></div>';}
   const swaps=Object.keys(S.swaps).filter(k=>k.startsWith(wk+'_')).map(k=>{const a=AREAS.find(x=>x.id===k.slice(wk.length+1));const s=S.swaps[k];return '<div class="swap-note"><b>'+a.name+'</b><span class="swap-arrow">'+ICONS.arrow+'</span>'+esc(rm(s.from).name)+' → <b>'+esc(rm(s.to).name)+'</b><span style="margin-left:auto">'+esc(rm(s.by).name)+' '+fmtDate(s.at).replace(' · 周'+['日','一','二','三','四','五','六'][new Date(s.at+'T00:00:00').getDay()],'')+'</span><button class="section-link" style="font-size:11.5px" onclick="cancelSwap(\''+a.id+'\')">撤销</button></div>';}).join('');
   const swapHtml=swaps?'<div class="section"><div class="section-head"><div class="section-title">本周调班记录</div></div><div class="card" style="padding:12px 16px">'+swaps+'</div></div>':'';
   const prog='<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:160px"><div class="progress'+(doneCount===AREAS.length?'':' amber')+'"><i style="width:'+(doneCount/AREAS.length*100)+'%"></i></div><span style="font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap">'+doneCount+' / '+AREAS.length+'</span></div>';
-  return '<div class="card"><div class="duty-head"><div><div class="section-title">本周值日</div><div class="duty-week">'+fmtWeek(wk)+' · 每周日 20:00 前完成并打卡</div></div>'+prog+'</div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th><th style="width:36%"></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+  return '<div class="card"><div class="duty-head"><div><div class="section-title">本周值日</div><div class="duty-week">'+fmtWeek(wk)+' · 每周日 20:00 前完成并打卡</div></div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+prog+'<button class="btn ghost sm" onclick="openPrefModal()">'+ICONS.gear+'偏好</button></div></div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th><th style="width:36%"></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +swapHtml
-    +'<div class="card" style="margin-top:16px"><div class="section-title" style="margin-bottom:6px">下周预告</div><div class="duty-week" style="margin-bottom:8px">'+fmtWeek(next)+' · 每周自动轮换</div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th></tr></thead><tbody>'+nextRows+'</tbody></table></div>'
+    +'<div class="card" style="margin-top:16px"><div class="section-title" style="margin-bottom:6px">下周预告</div><div class="duty-week" style="margin-bottom:8px">'+fmtWeek(next)+' · 自动轮换 · 按值日偏好微调</div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th></tr></thead><tbody>'+nextRows+'</tbody></table></div>'
     +'<div class="section"><div class="section-head"><div class="section-title">历史打卡</div><span class="row-sub">近 4 周</span></div><div class="card">'+hist+'</div></div>';
 }
 function toggleDuty(aid){const wk=weekKeyOf(new Date());const k=wk+'_'+aid;if(S.tasks[k]){delete S.tasks[k];toast('已取消本次打卡');}else{S.tasks[k]=dstr(new Date());toast('打卡完成，辛苦啦');}save();renderAll();}
@@ -638,7 +678,7 @@ function submitRule(ev,id){ev.preventDefault();const f=ev.target;const title=f.t
   const rec={id:uid(),title,cat:f.cat.value,content,createdAt:dstr(new Date())};S.rules.unshift(rec);S.ruleSigns[rec.id]=[];save();closeModal();toast('公约已发布，快@室友来签');renderAll();}
 function openRoommateModal(){openModal('<div class="modal-head"><div class="modal-title">添加室友</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div><form onsubmit="submitRoommate(event)">'+field('室友昵称', '<input class="input" name="name" required maxlength="10" placeholder="例如：小林">')+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">加入合租</button></div></form>');}
 function submitRoommate(ev){ev.preventDefault();const name=ev.target.name.value.trim();if(!name){toast('请填写昵称');return;}if(S.roommates.some(r=>r.name===name)){toast('已有同名室友');return;}S.roommates.push({id:uid(),name,color:AV_COLORS[S.roommates.length%AV_COLORS.length]});save();closeModal();toast('欢迎 '+name+' 入住');renderAll();}
-function removeRoommate(id){if(id===S.meId){toast('不能移除自己');return;}if(!confirm('确定移除 '+rm(id).name+' 吗？相关账目与签署记录会自动整理。'))return;S.roommates=S.roommates.filter(r=>r.id!==id);S.expenses.forEach(e=>{e.participantIds=e.participantIds.filter(pid=>pid!==id);if(e.payerId===id)e.payerId=S.meId;});Object.keys(S.ruleSigns).forEach(k=>{S.ruleSigns[k]=S.ruleSigns[k].filter(x=>x!==id);});save();renderAll();toast('已移除室友');}
+function removeRoommate(id){if(id===S.meId){toast('不能移除自己');return;}if(!confirm('确定移除 '+rm(id).name+' 吗？相关账目与签署记录会自动整理。'))return;S.roommates=S.roommates.filter(r=>r.id!==id);S.expenses.forEach(e=>{e.participantIds=e.participantIds.filter(pid=>pid!==id);if(e.payerId===id)e.payerId=S.meId;});Object.keys(S.ruleSigns).forEach(k=>{S.ruleSigns[k]=S.ruleSigns[k].filter(x=>x!==id);});if(S.prefs)delete S.prefs[id];save();renderAll();toast('已移除室友');}
 function openSettings(){
   openModal('<div class="modal-head"><div class="modal-title">设置</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div><form onsubmit="submitSettings(event)">'+field('公寓名称', '<input class="input" name="flatname" required maxlength="30" value="'+esc(S.flat.name)+'">')+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">保存</button></div></form><div class="section" style="margin-top:6px"><div class="section-title" style="margin-bottom:10px">数据</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn ghost" onclick="resetDemo()">看看演示数据</button><button type="button" class="btn ghost" onclick="exportData()">'+ICONS.download+'导出备份</button><button type="button" class="btn ghost" onclick="document.getElementById(\'import-file\').click()">'+ICONS.upload+'导入备份</button><button type="button" class="btn danger" onclick="clearAll()">清空并重新引导</button></div><input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)"><div class="row-sub" style="margin-top:14px">数据保存在当前浏览器 localStorage，仅本机可见。「看看演示数据」可快速体验完整流程；「导出备份」可下载 JSON 文件随身携带，换设备或清浏览器后「导入备份」一键恢复。</div></div>');
 }
