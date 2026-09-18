@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>合租生活管家 · 一起住，不吵架</title>
 <meta name="description" content="合租生活管家：费用AA分摊、清洁值日排班、公共物品登记与提醒、室友公约管理。">
+<meta name="theme-color" content="#0E6B5C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="合租生活管家">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="%230E6B5C"/><path d="M16 6.5 7.5 14v11.5h17V14z" fill="none" stroke="white" stroke-width="2.2" stroke-linejoin="round"/><path d="M12.5 25.5v-7h7v7" fill="none" stroke="white" stroke-width="2.2" stroke-linejoin="round"/></svg>'>
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
 <style>
@@ -175,6 +181,12 @@ textarea.input{resize:vertical;min-height:72px}
 .duty-area svg{width:17px;height:17px;color:var(--primary)}
 .done-badge{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-weight:700;font-size:13px}
 .done-badge svg{width:15px;height:15px}
+.swap-badge{display:inline-flex;align-items:center;gap:5px;color:#B9770E;font-weight:700;font-size:12px;background:var(--accent-soft);padding:3px 9px;border-radius:999px}
+.swap-badge svg{width:12px;height:12px}
+.swap-note{display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:12.5px;color:var(--ink-2);border-bottom:1px dashed var(--line)}
+.swap-note:last-child{border-bottom:none}
+.swap-note b{color:var(--ink)}
+.swap-arrow{color:var(--ink-3)}
 .person-cell{display:flex;align-items:center;gap:8px;font-weight:500}
 .hist-week{display:flex;gap:10px;padding:11px 2px;border-bottom:1px dashed var(--line);align-items:center}
 .hist-week:last-child{border-bottom:none}
@@ -311,7 +323,9 @@ edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2
 arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/></svg>',
 spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9 19.5 11 13.9 13 12 18.5 10.1 13 4.5 11 10.1 9z"/></svg>',
 cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.6"/><circle cx="17.5" cy="20" r="1.6"/><path d="M3 4h2.5l2.2 11h10.6L21 8H6.2"/></svg>',
-copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4.5A2.5 2.5 0 0 1 2 12.5v-8A2.5 2.5 0 0 1 4.5 2h8A2.5 2.5 0 0 1 15 4.5V5"/></svg>'
+copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4.5A2.5 2.5 0 0 1 2 12.5v-8A2.5 2.5 0 0 1 4.5 2h8A2.5 2.5 0 0 1 15 4.5V5"/></svg>',
+swap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h13a3 3 0 0 1 3 3v2"/><path d="m16 21 4-4-4-4"/><path d="M20 17H7a3 3 0 0 1-3-3v-2"/></svg>',
+share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="17.5" cy="5.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.2 10.8 7-4M8.2 13.2l7 4"/></svg>'
 };
 const AREAS=[
 {id:'kitchen',name:'厨房',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M4 11V8h16v3M12 8V5"/></svg>'},
@@ -345,16 +359,16 @@ function defaultState(){
   const ruleSigns={};rules.forEach((r,i)=>{const signed=i%3===2?[me.id,r3.id]:i%4===0?[me.id,r2.id,r3.id,r4.id]:i%5===0?[me.id,r2.id]:[me.id,r2.id,r3.id];ruleSigns[r.id]=signed;});
   const tasks={};for(let k=1;k<=4;k++){const key=weekKeyOf(addDays(new Date(),-7*k));const duty=dutyOf(key,rms);AREAS.forEach((a,idx)=>{if(idx!==k%4){tasks[key+'_'+a.id]=daysAgo(7*k-(k%3));}});}
   const wk=weekKeyOf(new Date());tasks[wk+'_kitchen']=daysAgo(1);
-  return {version:1,flat:{name:'阳光花园 3 栋 502',createdAt:daysAgo(60)},meId:me.id,roommates:rms,expenses:exps.filter(Boolean),items,rules,ruleSigns,tasks,lastDataReset:null};
+  return {version:1,flat:{name:'阳光花园 3 栋 502',createdAt:daysAgo(60)},meId:me.id,roommates:rms,expenses:exps.filter(Boolean),items,rules,ruleSigns,tasks,swaps:{},lastDataReset:null};
 }
 function buildFreshState(flatName,names){
   const rms=names.map((n,i)=>({id:uid(),name:n,color:AV_COLORS[i%AV_COLORS.length]}));
   const fr=(t,c,ct)=>({id:uid(),title:t,cat:c,content:ct,createdAt:dstr(new Date())});
   const rules=[fr('晚上 11 点后保持安静','作息噪音','23:00 后客厅不喧闹，音乐、游戏、视频尽量戴耳机或调低音量。'),fr('公共区域每周大扫除','清洁卫生','每周日按值日表完成清洁，完成后在「值日」模块打卡。'),fr('访客提前说一声','访客','带朋友回家在群里说一声；留宿不超过 3 晚，需征得室友同意。')];
   const ruleSigns={};rules.forEach(r=>{ruleSigns[r.id]=[];});
-  return {version:1,flat:{name:flatName,createdAt:dstr(new Date())},meId:rms[0].id,roommates:rms,expenses:[],items:[],rules,ruleSigns,tasks:{},onboarded:true};
+  return {version:1,flat:{name:flatName,createdAt:dstr(new Date())},meId:rms[0].id,roommates:rms,expenses:[],items:[],rules,ruleSigns,tasks:{},swaps:{},onboarded:true};
 }
-function load(){try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);if(S&&Array.isArray(S.roommates)&&S.roommates.length&&Array.isArray(S.expenses)){return;}}}catch(e){}S=defaultState();}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);if(S&&Array.isArray(S.roommates)&&S.roommates.length&&Array.isArray(S.expenses)){if(!S.swaps)S.swaps={};return;}}}catch(e){}S=defaultState();}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('保存失败：浏览器存储不可用');}}
 function resetDemo(){S=defaultState();save();renderAll();toast('已重置为演示数据');}
 function clearAll(){try{localStorage.removeItem(KEY);}catch(e){}location.reload();}
@@ -381,8 +395,8 @@ function lowItems(){return S.items.filter(itemLow);}
 function goSettle(){expTab='settle';navigate('expense');}
 function todoItems(){
   const out=[];
-  const wk=weekKeyOf(new Date());const duty=dutyOf(wk);
-  const myArea=AREAS.find(a=>duty[a.id]===S.meId);
+  const wk=weekKeyOf(new Date());
+  const myArea=AREAS.find(a=>swapFor(wk,a.id)===S.meId);
   if(myArea&&!S.tasks[wk+'_'+myArea.id]){out.push({icon:'calendar',text:'本周轮到你打扫「'+myArea.name+'」',sub:'今天还没打卡',btn:'去打卡',run:"toggleDuty('"+myArea.id+"')"});}
   lowItems().slice(0,2).forEach(it=>{out.push({icon:'alert',text:it.name+' 只剩 '+it.qty+' '+it.unit,sub:'提醒线 '+it.threshold+' '+it.unit,btn:'补货',run:"restock('"+it.id+"')"});});
   const expsM=expsOfMonth(thisMonth());const net=balances(expsM)[S.meId]||0;
@@ -402,8 +416,8 @@ function viewHome(){
   const month=thisMonth();const me=rm(S.meId);
   const exps=expsOfMonth(month);const total=exps.reduce((s,e)=>s+e.amount,0);const per=total/(S.roommates.length||1);
   const net=balances(exps)[S.meId]||0;
-  const wk=weekKeyOf(new Date());const duty=dutyOf(wk);
-  const myArea=AREAS.find(a=>duty[a.id]===S.meId);
+  const wk=weekKeyOf(new Date());
+  const myArea=AREAS.find(a=>swapFor(wk,a.id)===S.meId);
   const doneCount=AREAS.filter(a=>S.tasks[wk+'_'+a.id]).length;
   const lows=lowItems();
   const totSigns=S.rules.reduce((s,r)=>s+(S.ruleSigns[r.id]||[]).length,0);const allSigns=S.rules.length*S.roommates.length;
@@ -420,7 +434,7 @@ function viewHome(){
     +'<button class="quick" onclick="openItemModal()"><div>'+ICONS.package+'</div><b>登记物品</b><span>缺货自动提醒</span></button>'
     +'<button class="quick" onclick="openRuleModal()"><div>'+ICONS.doc+'</div><b>新增公约</b><span>室友一起签署</span></button></div>';
   const lowHtml=lows.length?'<div class="list">'+lows.slice(0,3).map(it=>'<div class="row"><div class="stock-icon warn" style="width:38px;height:38px">'+ICONS.alert+'</div><div class="row-main"><div class="row-title">'+esc(it.name)+'</div><div class="row-sub">剩 '+it.qty+' '+it.unit+' · 低于提醒线 '+it.threshold+' '+it.unit+'</div></div><button class="btn soft sm" onclick="restock(\''+it.id+'\')">'+ICONS.plus+'补货</button></div>').join('')+'</div>':'<div class="empty" style="padding:14px">库存充足，暂无待采购物品。</div>';
-  const dutyHtml=AREAS.map(a=>{const rid=duty[a.id];const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];return '<div class="row"><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div><div class="row-main"><div class="row-sub" style="margin-top:0">'+avatarHtml(r)+' '+nameHtml(r)+'</div></div><div>'+(done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡完成</button>')+'</div></div>';}).join('');
+  const dutyHtml=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];return '<div class="row"><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div><div class="row-main"><div class="row-sub" style="margin-top:0">'+avatarHtml(r)+' '+nameHtml(r)+(sw?' <span class="swap-badge">'+ICONS.swap+'调</span>':'')+'</div></div><div>'+(done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡完成</button>')+'</div></div>';}).join('');
   const signHtml='<div style="display:flex;align-items:center;gap:12px"><div class="progress" style="height:10px"><i style="width:'+signPct+'%"></i></div><span style="font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap">'+signPct+'%</span></div>';
   return '<div class="hero"><div class="hero-greet">'+greeting()+'，'+esc(me.name)+'</div><div class="hero-title">'+esc(S.flat.name)+'</div><div class="hero-date">'+fmtDate(dstr(new Date()))+' · 和室友一起把生活过明白</div>'+heroChips+'</div>'+buildTodoCard()+stats+quicks
     +'<div class="section"><div class="section-head"><div class="section-title">'+ICONS.alert+' 待采购提醒</div><a class="section-link" href="#/items">去物品页 →</a></div><div class="card">'+lowHtml+'</div></div>'
@@ -481,26 +495,67 @@ function viewSettle(expsM,total){
   const meTip=meNet>0.005?'你本月应收 '+fmtMoney(meNet)+'，记得在每周四结算日催一下。':meNet<-0.005?'你本月待付 '+fmtMoney(Math.abs(meNet))+'，结算日记得转给室友。':'你本月收支两清，真棒。';
   return '<div class="section"><div class="section-head"><div class="section-title">收支净额（全部月份）</div></div><div class="card">'+rows+'</div></div><div class="section"><div class="section-head"><div class="section-title">转账建议（最少笔数）</div><span class="row-sub">'+meTip+'</span></div><div class="card">'+transHtml+'</div></div>';
 }
+function swapFor(week,aid){const s=S.swaps[week+'_'+aid];return s?s.to:dutyOf(week)[aid];}
+function swapDuty(aid){
+  const wk=weekKeyOf(new Date());const cur=swapFor(wk,aid);const r=rm(cur);
+  const opts=S.roommates.filter(m=>m.id!==cur).map(m=>'<button type="button" class="check-chip" data-sr="'+m.id+'" onclick="doSwap(\''+aid+'\',\''+m.id+'\')">'+avatarHtml(m,'sm')+esc(m.name)+'</button>').join('');
+  openModal('<div class="modal-head"><div class="modal-title">本周值日调班</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div>'
+    +'<div style="font-size:13.5px;color:var(--ink-2);line-height:1.9;margin-bottom:14px">本周「'+AREAS.find(a=>a.id===aid).name+'」轮到你负责的是 <b style="color:var(--ink)">'+esc(r.name)+'</b>，想请哪位室友临时接手？</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+opts+'</div>'
+    +'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button></div>');
+}
+function doSwap(aid,toId){
+  const wk=weekKeyOf(new Date());const key=wk+'_'+aid;const from=swapFor(wk,aid);
+  if(from===toId){closeModal();return;}
+  S.swaps[key]={from,to:toId,by:S.meId,at:dstr(new Date())};
+  save();closeModal();toast(esc(rm(toId).name)+' 接手了'+AREAS.find(a=>a.id===aid).name);
+  renderAll();
+}
+function cancelSwap(aid){const wk=weekKeyOf(new Date());delete S.swaps[wk+'_'+aid];save();renderAll();toast('已恢复原排班');}
 function viewCleaning(){
   const wk=weekKeyOf(new Date());const next=weekKeyOf(addDays(new Date(),7));
   const duty=dutyOf(wk);const dutyNext=dutyOf(next);
   const doneCount=AREAS.filter(a=>S.tasks[wk+'_'+a.id]).length;
-  const rows=AREAS.map(a=>{const r=rm(duty[a.id]);const done=!!S.tasks[wk+'_'+a.id];return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+'</div></td><td style="text-align:right;white-space:nowrap">'+(done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡完成</button>')+'</td></tr>';}).join('');
+  const rows=AREAS.map(a=>{const rid=swapFor(wk,a.id);const r=rm(rid);const done=!!S.tasks[wk+'_'+a.id];const sw=S.swaps[wk+'_'+a.id];
+    const ops=done?'<span class="done-badge">'+ICONS.check+'已完成</span>':'<div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn soft sm" onclick="toggleDuty(\''+a.id+'\')">'+ICONS.checkc+'打卡</button><button class="btn ghost sm" onclick="swapDuty(\''+a.id+'\')">'+ICONS.swap+'调班</button></div>';
+    return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+(sw?' <span class="swap-badge">'+ICONS.swap+'已调班</span>':'')+'</div></td><td style="text-align:right;white-space:nowrap">'+ops+'</td></tr>';}).join('');
   const nextRows=AREAS.map(a=>{const r=rm(dutyNext[a.id]);return '<tr><td><div class="duty-area">'+a.icon+'<span>'+a.name+'</span></div></td><td><div class="person-cell">'+avatarHtml(r)+nameHtml(r)+'</div></td></tr>';}).join('');
   let hist='';for(let k=4;k>=1;k--){const key=weekKeyOf(addDays(new Date(),-7*k));const dutyK=dutyOf(key);const dots=AREAS.map(a=>{const done=!!S.tasks[key+'_'+a.id];return '<span class="hist-dot"><i class="'+(done?'done':'no')+'"></i>'+a.name+'</span>';}).join('');hist+='<div class="hist-week"><div class="wk">'+fmtWeek(key)+'</div><div class="hist-dots">'+dots+'</div></div>';}
+  const swaps=Object.keys(S.swaps).filter(k=>k.startsWith(wk+'_')).map(k=>{const a=AREAS.find(x=>x.id===k.slice(wk.length+1));const s=S.swaps[k];return '<div class="swap-note"><b>'+a.name+'</b><span class="swap-arrow">'+ICONS.arrow+'</span>'+esc(rm(s.from).name)+' → <b>'+esc(rm(s.to).name)+'</b><span style="margin-left:auto">'+esc(rm(s.by).name)+' '+fmtDate(s.at).replace(' · 周'+['日','一','二','三','四','五','六'][new Date(s.at+'T00:00:00').getDay()],'')+'</span><button class="section-link" style="font-size:11.5px" onclick="cancelSwap(\''+a.id+'\')">撤销</button></div>';}).join('');
+  const swapHtml=swaps?'<div class="section"><div class="section-head"><div class="section-title">本周调班记录</div></div><div class="card" style="padding:12px 16px">'+swaps+'</div></div>':'';
   const prog='<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:160px"><div class="progress'+(doneCount===AREAS.length?'':' amber')+'"><i style="width:'+(doneCount/AREAS.length*100)+'%"></i></div><span style="font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap">'+doneCount+' / '+AREAS.length+'</span></div>';
-  return '<div class="card"><div class="duty-head"><div><div class="section-title">本周值日</div><div class="duty-week">'+fmtWeek(wk)+' · 每周日 20:00 前完成并打卡</div></div>'+prog+'</div><table class="duty-table"><thead><tr><th style="width:30%">公共区域</th><th>负责人</th><th style="width:34%"></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="card" style="margin-top:16px"><div class="section-title" style="margin-bottom:6px">下周预告</div><div class="duty-week" style="margin-bottom:8px">'+fmtWeek(next)+' · 每周自动轮换</div><table class="duty-table"><thead><tr><th style="width:30%">公共区域</th><th>负责人</th></tr></thead><tbody>'+nextRows+'</tbody></table></div>'
+  return '<div class="card"><div class="duty-head"><div><div class="section-title">本周值日</div><div class="duty-week">'+fmtWeek(wk)+' · 每周日 20:00 前完成并打卡</div></div>'+prog+'</div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th><th style="width:36%"></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +swapHtml
+    +'<div class="card" style="margin-top:16px"><div class="section-title" style="margin-bottom:6px">下周预告</div><div class="duty-week" style="margin-bottom:8px">'+fmtWeek(next)+' · 每周自动轮换</div><table class="duty-table"><thead><tr><th style="width:28%">公共区域</th><th>负责人</th></tr></thead><tbody>'+nextRows+'</tbody></table></div>'
     +'<div class="section"><div class="section-head"><div class="section-title">历史打卡</div><span class="row-sub">近 4 周</span></div><div class="card">'+hist+'</div></div>';
 }
 function toggleDuty(aid){const wk=weekKeyOf(new Date());const k=wk+'_'+aid;if(S.tasks[k]){delete S.tasks[k];toast('已取消本次打卡');}else{S.tasks[k]=dstr(new Date());toast('打卡完成，辛苦啦');}save();renderAll();}
+function copyShoppingList(){
+  const lows=lowItems();
+  if(!lows.length){toast('没有待采购物品');return;}
+  const lines=['【采购清单】'+S.flat.name+' · '+dstr(new Date()).slice(5).replace('-','月')+'日'];
+  lows.forEach((it,i)=>{lines.push((i+1)+'. '+it.name+'（剩 '+it.qty+' '+it.unit+'，提醒线 '+it.threshold+' '+it.unit+'）');});
+  lines.push('共 '+lows.length+' 件，谁方便谁带～');
+  const txt=lines.join('\n');
+  const done=()=>{toast('采购清单已复制，去群里粘贴吧');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    let settled=false;
+    const finish=()=>{if(!settled){settled=true;done();}};
+    navigator.clipboard.writeText(txt).then(finish,()=>{fallbackCopy(txt);finish();});
+    setTimeout(()=>{if(!settled){fallbackCopy(txt);finish();}},700);
+  }
+  else{fallbackCopy(txt);done();}
+}
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();
+}
 function viewItems(){
   const lows=lowItems();
   const buyHtml=lows.length?'<div class="list">'+lows.map(it=>'<div class="stock-card"><div class="stock-icon warn">'+ICONS.alert+'</div><div class="stock-main"><div class="stock-name">'+esc(it.name)+' <span class="chip red">需采购</span></div><div class="stock-meta">剩 '+it.qty+' '+esc(it.unit)+' · 低于提醒线 '+it.threshold+' '+esc(it.unit)+'</div></div><div class="stock-actions"><button class="btn soft sm" onclick="restock(\''+it.id+'\')">'+ICONS.plus+'已补货</button><button class="btn ghost sm" onclick="openItemModal(\''+it.id+'\')">'+ICONS.edit+'</button></div></div>').join('')+'</div>':emptyHtml('所有物品库存充足，暂无待采购项。');
   const grid=S.items.map(it=>{const low=itemLow(it);const max=Math.max(it.threshold*2,it.qty,2);const pct=Math.min(100,it.qty/max*100);
     return '<div class="item-card"><div class="item-top"><span class="stock-icon '+(low?'warn':'')+'" style="width:34px;height:34px">'+ICONS.package+'</span><div class="item-name">'+esc(it.name)+'</div>'+(low?'<span class="chip red">需采购</span>':'<span class="chip gray">充足</span>')+'</div><div class="item-qty"><b>'+it.qty+'</b><span class="unit">'+esc(it.unit)+'</span><span style="margin-left:auto;font-size:11.5px;color:var(--ink-3)">提醒线 '+it.threshold+esc(it.unit)+'</span></div><div class="stock-bar" style="max-width:none"><i class="'+(low?'warn':'')+'" style="width:'+pct+'%"></i></div><div class="row-sub" style="margin-top:0">'+catChip(it.cat)+'</div><div class="item-ops"><button class="btn ghost sm" onclick="consume(\''+it.id+'\')">'+ICONS.minus+'消耗</button><button class="btn soft sm" onclick="restock(\''+it.id+'\')">'+ICONS.plus+'补货</button><button class="btn ghost sm" onclick="openItemModal(\''+it.id+'\')">'+ICONS.edit+'</button><button class="btn danger sm" onclick="delItem(\''+it.id+'\')">'+ICONS.trash+'</button></div></div>';
   }).join('');
-  return '<div class="card"><div class="section-head" style="margin-bottom:8px"><div class="section-title">'+ICONS.cart+' 采购清单</div><span class="row-sub">'+lows.length+' 件待补</span></div>'+buyHtml+'</div><div class="section"><div class="section-head"><div class="section-title">公共物品登记</div><button class="btn primary sm" onclick="openItemModal()">'+ICONS.plus+'添加物品</button></div><div class="item-grid">'+(grid||emptyHtml('还没有登记物品，先从「垃圾袋」「卷纸」开始，库存低了会自动提醒。'))+'</div></div>';
+  return '<div class="card"><div class="section-head" style="margin-bottom:8px"><div class="section-title">'+ICONS.cart+' 采购清单</div><div style="display:flex;align-items:center;gap:8px"><span class="row-sub">'+lows.length+' 件待补</span>'+(lows.length?'<button class="btn ghost sm" onclick="copyShoppingList()">'+ICONS.share+'复制清单</button>':'')+'</div></div>'+buyHtml+'</div><div class="section"><div class="section-head"><div class="section-title">公共物品登记</div><button class="btn primary sm" onclick="openItemModal()">'+ICONS.plus+'添加物品</button></div><div class="item-grid">'+(grid||emptyHtml('还没有登记物品，先从「垃圾袋」「卷纸」开始，库存低了会自动提醒。'))+'</div></div>';
 }
 function consume(id){const it=S.items.find(x=>x.id===id);if(!it)return;it.qty=Math.max(0,it.qty-1);save();renderAll();toast('已消耗 1 '+esc(it.unit));}
 function restock(id){const it=S.items.find(x=>x.id===id);if(!it)return;it.qty+=1;save();renderAll();toast('已补货 +1 '+esc(it.unit));}
@@ -511,7 +566,7 @@ function viewRules(){
   const roster=S.roommates.map(r=>'<span class="roster-item'+(r.id===S.meId?' me':'')+'">'+avatarHtml(r)+nameHtml(r)+(r.id===S.meId?'':'<button class="rm-x" onclick="removeRoommate(\''+r.id+'\')" title="移除">'+ICONS_X+'</button>')+'</span>').join('');
   const rules=S.rules.map(r=>{const signed=S.ruleSigns[r.id]||[];const n=signed.length;const prog=Math.round(n/S.roommates.length*100);
     const chips=S.roommates.map(m=>'<button class="sign-chip'+(signed.includes(m.id)?' on':'')+'" onclick="toggleSign(\''+r.id+'\',\''+m.id+'\')"><span class="ck">'+(signed.includes(m.id)?ICONS.check:'')+'</span>'+avatarHtml(m,'sm')+esc(m.name)+'</button>').join('');
-    return '<div class="card rule-card"><div class="rule-head"><span class="chip '+(r.cat==='清洁卫生'||r.cat==='公共区域'?'green':r.cat==='费用'?'blue':r.cat==='访客'?'amber':'teal')+'">'+esc(r.cat)+'</span><div class="rule-title">'+esc(r.title)+'</div><button class="section-link" style="color:var(--danger)" onclick="delRule(\''+r.id+'\')">删除</button></div><div class="rule-content">'+esc(r.content)+'</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div class="progress'+(n===S.roommates.length?'':' amber')+'" style="max-width:220px"><i style="width:'+prog+'%"></i></div><span class="row-sub">'+n+' / '+S.roommates.length+' 已签署</span></div><div class="sign-row">'+chips+'</div></div>';
+    return '<div class="card rule-card"><div class="rule-head"><span class="chip '+(r.cat==='清洁卫生'||r.cat==='公共区域'?'green':r.cat==='费用'?'blue':r.cat==='访客'?'amber':'teal')+'">'+esc(r.cat)+'</span><div class="rule-title">'+esc(r.title)+'</div><button class="section-link" onclick="openRuleModal(\''+r.id+'\')">编辑</button><button class="section-link" style="color:var(--danger)" onclick="delRule(\''+r.id+'\')">删除</button></div><div class="rule-content">'+esc(r.content)+'</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div class="progress'+(n===S.roommates.length?'':' amber')+'" style="max-width:220px"><i style="width:'+prog+'%"></i></div><span class="row-sub">'+n+' / '+S.roommates.length+' 已签署</span></div><div class="sign-row">'+chips+'</div></div>';
   }).join('');
   return '<div class="card"><div class="section-head" style="margin-bottom:10px"><div class="section-title">'+ICONS.users+' 室友名单</div><button class="btn primary sm" onclick="openRoommateModal()">'+ICONS.plus+'添加室友</button></div><div class="roster">'+roster+'</div></div><div class="card" style="margin-top:16px"><div class="section-head" style="margin-bottom:10px"><div class="section-title">总体签署进度</div><span class="row-sub">'+totSigns+' / '+allSigns+' 人次 · '+pct+'%</span></div><div class="progress'+(pct===100?'':' amber')+'"><i style="width:'+pct+'%"></i></div><div class="row-sub" style="margin-top:8px">点击下方任意室友头像即可切换签署状态（演示数据可直接体验）</div></div><div class="section"><div class="section-head"><div class="section-title">公约条款</div><button class="btn primary sm" onclick="openRuleModal()">'+ICONS.plus+'新增公约</button></div>'+rules+'</div>';
 }
@@ -564,11 +619,14 @@ function submitItem(ev,id){
   if(id){const i=S.items.findIndex(x=>x.id===id);if(i>=0)S.items[i]=rec;}else S.items.push(rec);
   save();closeModal();toast('物品已登记');renderAll();
 }
-function openRuleModal(){
-  const catOpts=RULECATS.map(c=>'<option>'+c+'</option>').join('');
-  openModal('<div class="modal-head"><div class="modal-title">新增公约</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div><form onsubmit="submitRule(event)">'+field('分类', '<div class="select-wrap"><select class="input" name="cat">'+catOpts+'</select></div>')+field('条款标题', '<input class="input" name="title" required maxlength="30" placeholder="例如：晚上 11 点后保持安静">')+field('条款内容', '<textarea class="input" name="content" required maxlength="200" placeholder="写清楚约定和边界，越具体越好执行"></textarea>')+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">发起签署</button></div></form>');
+function openRuleModal(id){
+  const r=id?S.rules.find(x=>x.id===id):null;
+  const catOpts=RULECATS.map(c=>'<option'+(r&&r.cat===c?' selected':'')+'>'+c+'</option>').join('');
+  openModal('<div class="modal-head"><div class="modal-title">'+(id?'编辑公约':'新增公约')+'</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div><form onsubmit="submitRule(event,'+(id?'\''+id+'\'':'null')+')">'+field('分类', '<div class="select-wrap"><select class="input" name="cat">'+catOpts+'</select></div>')+field('条款标题', '<input class="input" name="title" required maxlength="30" placeholder="例如：晚上 11 点后保持安静" value="'+esc(r?r.title:'')+'">')+field('条款内容', '<textarea class="input" name="content" required maxlength="200" placeholder="写清楚约定和边界，越具体越好执行">'+esc(r?r.content:'')+'</textarea>')+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">'+(id?'保存修改':'发起签署')+'</button></div></form>');
 }
-function submitRule(ev){ev.preventDefault();const f=ev.target;const title=f.title.value.trim();const content=f.content.value.trim();if(!title||!content){toast('请填写标题和内容');return;}const rec={id:uid(),title,cat:f.cat.value,content,createdAt:dstr(new Date())};S.rules.unshift(rec);S.ruleSigns[rec.id]=[];save();closeModal();toast('公约已发布，快@室友来签');renderAll();}
+function submitRule(ev,id){ev.preventDefault();const f=ev.target;const title=f.title.value.trim();const content=f.content.value.trim();if(!title||!content){toast('请填写标题和内容');return;}
+  if(id){const i=S.rules.findIndex(x=>x.id===id);if(i>=0){S.rules[i].title=title;S.rules[i].content=content;S.rules[i].cat=f.cat.value;}save();closeModal();toast('公约已更新');renderAll();return;}
+  const rec={id:uid(),title,cat:f.cat.value,content,createdAt:dstr(new Date())};S.rules.unshift(rec);S.ruleSigns[rec.id]=[];save();closeModal();toast('公约已发布，快@室友来签');renderAll();}
 function openRoommateModal(){openModal('<div class="modal-head"><div class="modal-title">添加室友</div><button type="button" class="modal-x" onclick="closeModal()">'+ICONS_X+'</button></div><form onsubmit="submitRoommate(event)">'+field('室友昵称', '<input class="input" name="name" required maxlength="10" placeholder="例如：小林">')+'<div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">取消</button><button type="submit" class="btn primary">加入合租</button></div></form>');}
 function submitRoommate(ev){ev.preventDefault();const name=ev.target.name.value.trim();if(!name){toast('请填写昵称');return;}if(S.roommates.some(r=>r.name===name)){toast('已有同名室友');return;}S.roommates.push({id:uid(),name,color:AV_COLORS[S.roommates.length%AV_COLORS.length]});save();closeModal();toast('欢迎 '+name+' 入住');renderAll();}
 function removeRoommate(id){if(id===S.meId){toast('不能移除自己');return;}if(!confirm('确定移除 '+rm(id).name+' 吗？相关账目与签署记录会自动整理。'))return;S.roommates=S.roommates.filter(r=>r.id!==id);S.expenses.forEach(e=>{e.participantIds=e.participantIds.filter(pid=>pid!==id);if(e.payerId===id)e.payerId=S.meId;});Object.keys(S.ruleSigns).forEach(k=>{S.ruleSigns[k]=S.ruleSigns[k].filter(x=>x!==id);});save();renderAll();toast('已移除室友');}
